@@ -253,7 +253,7 @@ void print_line(int c, LINE line, int line_count, int line_loc) {
 }
 
 int main(int argc, char *argv[]) {
-    int i, c, line_count, line_loc, last_line_loc = 0;
+    int i, c, line_count, start_loc, line_loc, last_line_loc = 0;
     char SYMTAB_sym[LEN_SYMBOL][LEN_SYMBOL];
     int SYMTAB_count = 0;
     int SYMTAB_loc[LEN_SYMBOL];
@@ -278,6 +278,7 @@ int main(int argc, char *argv[]) {
                         line_loc = 0;
                     }
                     print_line(c, line, line_count, line_loc);
+                    start_loc = line_loc;
                     last_line_loc = line_loc;
                 } else if (line.code == OPTAB[13].code) {
                     line_loc = last_line_loc;
@@ -293,7 +294,7 @@ int main(int argc, char *argv[]) {
             ASM_close();
         }
         // print program length
-        printf("Program length = %X\n", line_loc + 1);
+        printf("Program length = %X\n", line_loc - start_loc + 1);
 
         // print symbol table
         for (int i = 0; i < SYMTAB_count; i++) {
