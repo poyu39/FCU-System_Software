@@ -273,12 +273,13 @@ int main(int argc, char *argv[]) {
                 }
                 if (line_count == 1 ) {
                     if (line.code == OPTAB[47].code) {
-                        start_loc = strtol(line.operand1, NULL, 16);
+                        int start_loc
+                        line_loc = atoi(line.operand1);
                     } else {
-                        start_loc = 0;
+                        line_loc = 0;
                     }
-                    line_loc = start_loc;
                     print_line(c, line, line_count, line_loc);
+                    start_loc = line_loc;
                     last_line_loc = line_loc;
                 } else if (line.code == OPTAB[13].code) {
                     line_loc = last_line_loc;
@@ -292,13 +293,6 @@ int main(int argc, char *argv[]) {
                 }
             }
             ASM_close();
-        }
-        // print program length
-        printf("Program length = %X\n", line_loc - start_loc + 1);
-
-        // print symbol table
-        for (int i = 0; i < SYMTAB_count; i++) {
-            printf("%6s :  %06X\n", SYMTAB_sym[i], SYMTAB_loc[i]);
         }
     }
 }
