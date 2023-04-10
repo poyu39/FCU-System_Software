@@ -45,12 +45,16 @@ void ASM_ungetc(int c) {
     ASM_buf = c;
 }
 
-int is_delimiter(int c) {
+int is_delimiter(int c, int space_in_operand) {
     int i;
-
-    for (i = 0; i < LEN_DELIMITER; i++)
-        if (c == DELIMITER[i])
-            return TRUE;
+    for (i = 0; i < LEN_DELIMITER; i++) {
+        if (c == DELIMITER[i]) {
+            if (!space_in_operand)
+                return TRUE;
+            else
+                return FALSE;
+        }
+    }
     return FALSE;
 }
 
@@ -69,6 +73,7 @@ int ASM_token(char *buf)
 {
     int c;
     int len;
+    int space_in_operand = FALSE;
 
     buf[0] = '\0';
     /* skip blank character */
@@ -92,8 +97,16 @@ int ASM_token(char *buf)
         buf[1] = '\0';
         len = 1;
     } else {
-        for (len = 0; !is_delimiter(c) && c != EOF; c = ASM_getc()) {
+        for (len = 0; !is_delimiter(c, space_in_operand) && c != EOF; c = ASM_getc()) {
             if (len < LEN_SYMBOL - 1) {
+                if (buf[0] == 'C' || buf[0] == 'X') {
+                    if (buf[1] == '\'')
+                        space_in_operand = TRUE;
+                    else
+                        space_in_operand = FALSE;
+                }
+                if (space_in_operand && c == '\'')
+                    space_in_operand = FALSE;
                 buf[len] = c;
                 len++;
             }
