@@ -252,11 +252,34 @@ void print_line(int c, LINE line, int line_count, int line_loc) {
     }
 }
 
+int objcode(LINE line) {
+    char TA_hex[9];
+    char op_bin[7];
+    char nixbpe_bin[6];
+    char disp_bin[20];
+
+    itoa(line.code, op_bin, 16);
+    op_bin[7] = '\0';
+
+    printf("%s\n", &op_bin);
+
+    // switch (line.addressing) {
+    // case ADDR_IMMEDIATE:
+    //     break;
+    // case ADDR_INDEX:
+    //     break;
+    // case ADDR_INDIRECT:
+    //     break;
+    // case ADDR_SIMPLE:
+    //     break;
+    // default:
+    //     break;
+    // }
+    
+}
+
 int main(int argc, char *argv[]) {
     int i, c, line_count, start_loc, line_loc, last_line_loc = 0;
-    char SYMTAB_sym[LEN_SYMBOL][LEN_SYMBOL];
-    int SYMTAB_count = 0;
-    int SYMTAB_loc[LEN_SYMBOL];
     char buf[LEN_SYMBOL];
     LINE line;
     if (argc < 2) {
@@ -266,30 +289,28 @@ int main(int argc, char *argv[]) {
             printf("File not found!!\n");
         else {
             for (line_count = 1; (c = process_line(&line)) != LINE_EOF; line_count++) {
-                if (c != LINE_ERROR && c != LINE_COMMENT && line.symbol[0] != '\0') {
-                    strcpy(SYMTAB_sym[SYMTAB_count], line.symbol);
-                    SYMTAB_loc[SYMTAB_count] = line_loc;
-                    SYMTAB_count++;
-                }
-                if (line_count == 1 ) {
+                if (line_count == 1) {
                     if (line.code == OPTAB[47].code) {
-                        int start_loc
-                        line_loc = atoi(line.operand1);
+                        start_loc = strtol(line.operand1, NULL, 16);
                     } else {
                         line_loc = 0;
                     }
-                    print_line(c, line, line_count, line_loc);
+                    objcode(line);
+                    // print_line(c, line, line_count, line_loc);
                     start_loc = line_loc;
                     last_line_loc = line_loc;
                 } else if (line.code == OPTAB[13].code) {
                     line_loc = last_line_loc;
-                    print_line(c, line, line_count, line_loc);
+                    objcode(line);
+                    // print_line(c, line, line_count, line_loc);
                 } else if (c != LINE_ERROR && c != LINE_COMMENT) {
-                    print_line(c, line, line_count, line_loc);
+                    objcode(line);
+                    // print_line(c, line, line_count, line_loc);
                     last_line_loc = line_loc;
                     line_loc += addloc(&line);
                 } else {
-                    print_line(c, line, line_count, line_loc);
+                    objcode(line);
+                    // print_line(c, line, line_count, line_loc);
                 }
             }
             ASM_close();
