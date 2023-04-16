@@ -253,15 +253,28 @@ void print_line(int c, LINE line, int line_count, int line_loc) {
 }
 
 int objcode(LINE line) {
+    char objcode_bin[32];
     char TA_hex[9];
-    char op_bin[7];
+    char opcode[3];
     char nixbpe_bin[6];
     char disp_bin[20];
 
-    itoa(line.code, op_bin, 16);
-    op_bin[7] = '\0';
+    itoa(line.code, opcode, 16);
+    opcode[3] = '\0';
 
-    printf("%s\n", &op_bin);
+    // if (line.fmt == FMT4) {
+    //     nixbpe_bin[5] = '1';
+    // } else {
+    //     nixbpe_bin[0] = '0';
+    //     nixbpe_bin[1] = '0';
+    //     nixbpe_bin[2] = '0';
+    //     nixbpe_bin[3] = '0';
+    //     nixbpe_bin[4] = '0';
+    //     nixbpe_bin[5] = '0';
+    //     nixbpe_bin[6] = '\0';
+    // }
+
+    printf("%02s\n", &opcode);
 
     // switch (line.addressing) {
     // case ADDR_IMMEDIATE:
