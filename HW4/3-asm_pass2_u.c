@@ -1,5 +1,6 @@
-#include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "2-optable.c"
 
@@ -23,6 +24,7 @@ typedef struct
     unsigned code;
     unsigned fmt;
     unsigned addressing;
+    unsigned loc;
 } LINE;
 
 int process_line(LINE *line);
@@ -38,6 +40,7 @@ void init_LINE(LINE *line) {
     line->code = 0x0;
     line->fmt = 0x0;
     line->addressing = ADDR_SIMPLE;
+    line->loc = 0x0;
 }
 
 int process_line(LINE *line)
@@ -253,48 +256,71 @@ void print_line(int c, LINE line, int line_count, int line_loc) {
 }
 
 int objcode(LINE line) {
-    char objcode_bin[32];
-    char TA_hex[9];
-    char opcode[3];
-    char nixbpe_bin[6];
-    char disp_bin[20];
+    if (line.fmt == FMT0) {
+        printf("\n");
+    } else {
+        char objcode_bin[32];
+        char TA_hex[9];
+        char opcode[9];
+        char nixbpe_bin[7];
+        char disp_bin[20];
 
-    itoa(line.code, opcode, 16);
-    opcode[3] = '\0';
+        nixbpe_bin[0] = '0';  // n
+        nixbpe_bin[1] = '0';  // i
+        nixbpe_bin[2] = '0';  // x
+        nixbpe_bin[3] = '0';  // b
+        nixbpe_bin[4] = '0';  // p
+        nixbpe_bin[5] = '0';  // e
+        nixbpe_bin[6] = '\0';
 
-    // if (line.fmt == FMT4) {
-    //     nixbpe_bin[5] = '1';
-    // } else {
-    //     nixbpe_bin[0] = '0';
-    //     nixbpe_bin[1] = '0';
-    //     nixbpe_bin[2] = '0';
-    //     nixbpe_bin[3] = '0';
-    //     nixbpe_bin[4] = '0';
-    //     nixbpe_bin[5] = '0';
-    //     nixbpe_bin[6] = '\0';
-    // }
+        if (line.fmt == FMT4) {
+            nixbpe_bin[5] = '1';
+        }
 
-    printf("%02s\n", &opcode);
-
-    // switch (line.addressing) {
-    // case ADDR_IMMEDIATE:
-    //     break;
-    // case ADDR_INDEX:
-    //     break;
-    // case ADDR_INDIRECT:
-    //     break;
-    // case ADDR_SIMPLE:
-    //     break;
-    // default:
-    //     break;
-    // }
-    
+        if (line.addressing == ADDR_IMMEDIATE) {
+            nixbpe_bin[1] = '1';
+        } else if (line.addressing == ADDR_INDIRECT) {
+            nixbpe_bin[0] = '1';
+        } else if (line.addressing == ADDR_INDEX) {
+            nixbpe_bin[2] = '1';
+        } else if (line.addressing == ADDR_SIMPLE) {
+            nixbpe_bin[0] = '1';
+            nixbpe_bin[1] = '1';
+        } else if (line.code == OP_BASE || line.code == 0x68 || line.code == 0x78) {
+            nixbpe_bin[3] = '1';
+        } else if (line.code == OP_NOBASE) {
+            nixbpe_bin[3] = '0';
+        }
+        itoa(line.code, opcode, 2);
+        while (strlen(opcode) < 8) {
+            char temp[9] = "0";
+            strcat(temp, opcode);
+            strcpy(opcode, temp);
+        }
+        for (int i = 0; i < 6; i++) {
+            printf("%c", opcode[i]);
+            if (i == 3) {
+                printf("\t");
+            }
+        }
+        for (int i = 0; i < 7; i++) {
+            printf("%c", nixbpe_bin[i]);
+            if (i == 1) {
+                printf("\t");
+            }
+        }
+        printf("\n");
+        
+        // printf("%s%s\n", &opcode, nixbpe_bin);
+    }
 }
 
 int main(int argc, char *argv[]) {
     int i, c, line_count, start_loc, line_loc, last_line_loc = 0;
+    line_loc = 0;
     char buf[LEN_SYMBOL];
     LINE line;
+    int loc_arr[1000];
     if (argc < 2) {
         printf("Usage: %s fname.asm\n", argv[0]);
     } else {
@@ -308,25 +334,25 @@ int main(int argc, char *argv[]) {
                     } else {
                         line_loc = 0;
                     }
-                    objcode(line);
-                    // print_line(c, line, line_count, line_loc);
                     start_loc = line_loc;
+                    print_line(c, line, line_count, line_loc);
                     last_line_loc = line_loc;
                 } else if (line.code == OPTAB[13].code) {
                     line_loc = last_line_loc;
-                    objcode(line);
-                    // print_line(c, line, line_count, line_loc);
+                    print_line(c, line, line_count, line_loc);
                 } else if (c != LINE_ERROR && c != LINE_COMMENT) {
-                    objcode(line);
-                    // print_line(c, line, line_count, line_loc);
                     last_line_loc = line_loc;
+                    print_line(c, line, line_count, line_loc);
                     line_loc += addloc(&line);
-                } else {
-                    objcode(line);
-                    // print_line(c, line, line_count, line_loc);
+                    // printf("%x\n", line_loc);
+                    loc_arr[line_count] = line_loc;
                 }
             }
             ASM_close();
         }
+    }
+
+    for (int i = 1; i < line_count; i++) {
+        printf("%06X\n", loc_arr[i]);
     }
 }
