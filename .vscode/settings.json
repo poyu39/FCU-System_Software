@@ -1,6 +1,0 @@
-{
-    "files.associations": {
-        "*.sk": "skript",
-        "stdlib.h": "c"
-    }
-}
