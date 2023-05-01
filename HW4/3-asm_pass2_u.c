@@ -27,6 +27,10 @@ typedef struct
     unsigned addressing;
 } LINE;
 
+
+LINE line_arr[100];
+int BASE = 0;
+
 int process_line(LINE *line);
 /* return LINE_EOF, LINE_COMMENT, LINE_ERROR, LINE_CORRECT and Instruction information in *line*/
 
@@ -256,11 +260,58 @@ void print_line(int c, LINE line, int line_count, int line_loc) {
     }
 }
 
-int objcode(LINE line) {
+int find_symtab(LINE input_line, int line_count) {
+    for (int i = 0; i < 100; i++) {
+        if (strcmp(input_line.operand1, line_arr[i].symbol) == 0 && line_count != i) {
+            return line_arr[i].loc;
+        }
+    }
+    return -1;
+}
+
+void disp(LINE line, int line_count) {
+    int disp_hex = 0;
+    int symtab_loc = find_symtab(line, line_count);
+    if (line.fmt == FMT4) {
+        if (symtab_loc == -1) {
+            printf("%05X", atoi(line.operand1));
+        } else {
+            printf("%05X", symtab_loc);
+        }
+    } else {
+        if (line.addressing == ADDR_SIMPLE) {
+            if (symtab_loc == -1) {
+                printf("000");
+            }
+        }
+        if (line.addressing == ADDR_IMMEDIATE) {
+            if (symtab_loc == -1) {
+                printf("%03X", atoi(line.operand1));
+            }
+        }
+        if (line.addressing == ADDR_INDIRECT) {
+            if (symtab_loc == -1) {
+                printf("000");
+            }
+        }
+        disp_hex = symtab_loc - line_arr[line_count + 1].loc;
+        if (disp_hex < -2048) {
+            disp_hex -= BASE;
+        }
+        if (disp_hex >= -2048 && disp_hex <= 2048) {
+            disp_hex += 4096;
+        }
+        printf("%03X", disp_hex);
+        printf("\t%d", disp_hex);
+    }
+    if (strcmp(line.op, "LDB") == 0) {
+        BASE = disp_hex;
+    }
+}
+
+int objcode(LINE line, int line_count) {
     unsigned opni_hex;
     unsigned xbpe_hex;
-    unsigned disp_hex;
-
     switch (line.fmt) {
     case FMT0:
         if (strcmp(line.op, "BYTE") == 0) {
@@ -293,6 +344,10 @@ int objcode(LINE line) {
         break;
     case FMT3:
     case FMT4:
+        if (strcmp(line.op, "RSUB") == 0) {
+            printf("4F0000");
+            break;
+        }
         opni_hex = line.code;
         
         if (line.addressing == ADDR_INDIRECT)
@@ -318,31 +373,14 @@ int objcode(LINE line) {
         if (line.addressing == ADDR_INDEX)
             xbpe_hex += 8;
 
-        if (line.addressing == ADDR_SIMPLE) {
-            
-        }
-
         // fmt 
         if (line.fmt == FMT4)
             xbpe_hex += 1;
-
-        // disp
-        if (line.fmt == FMT3) {
-            for (int i = line_count; i < 100; i++) {
-                if (strcmp(line.operand1, line_arr[i].symbol) == 0) {
-                    disp_hex = [i].loc;
-                    break;
-                }
-            }
-            if (disp_hex > 2047) {
-                xbpe_hex += 4;
-                disp_hex = disp_hex - 4096;
-            }
-        } else {
-            disp_hex = atoi(line.operand1);
-        }
-
+        
         printf("%02X%X", opni_hex, xbpe_hex);
+        
+        disp(line, line_count);
+
         break;
     default:
         printf(" ");
@@ -350,18 +388,6 @@ int objcode(LINE line) {
     }
     
     printf("\n");
-}
-
-void print_line_locobj(int start_loc, LINE line_arr[], int c, int line_count, LINE line) {
-    if (line_count == 1) {
-        if (strcmp(line.op, "START") == 0) {
-            printf("%06X\t%s\t%x\n", start_loc, line.op, line.fmt);
-        }
-    } else {
-        if (c != LINE_ERROR && c != LINE_COMMENT)
-            printf("%06X\t%s\t%x\t", line_arr[line_count].loc, line.op, line.fmt);
-        objcode(line);
-    }
 }
 
 int main(int argc, char *argv[]) {
@@ -372,7 +398,6 @@ int main(int argc, char *argv[]) {
     
     line_loc = 0;
     LINE line;
-    LINE line_arr[100];
 
     if (argc < 2) {
         printf("Usage: %s fname.asm\n", argv[0]);
@@ -407,17 +432,9 @@ int main(int argc, char *argv[]) {
         }
     }
     
-    // pass2
-    if (argc < 2) {
-        printf("Usage: %s fname.asm\n", argv[0]);
-    } else {
-        if (ASM_open(argv[1]) == NULL)
-            printf("File not found!!\n");
-        else {
-            for (line_count = 1; (c = process_line(&line)) != LINE_EOF; line_count++) {
-                print_line_locobj(start_loc, line_arr, c, line_count, line);
-            }
-            ASM_close();
-        }
+    // pass 2
+    for (int i = 1; i < line_count; i++) {
+        printf("%06X\t%s\t", line_arr[i].loc, line_arr[i].op);
+        objcode(line_arr[i], i);
     }
 }
