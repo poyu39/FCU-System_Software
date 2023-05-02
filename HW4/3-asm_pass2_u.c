@@ -360,6 +360,41 @@ void objcode(LINE line, int line_count) {
         } else if (strcmp(line.op, "COMPR") == 0) {
             printf("A0");
         }
+        if (strcmp(line.operand1, "A") == 0) {
+            printf("0");
+        } else if (strcmp(line.operand1, "X") == 0) {
+            printf("1");
+        } else if (strcmp(line.operand1, "L") == 0) {
+            printf("2");
+        } else if (strcmp(line.operand1, "B") == 0) {
+            printf("3");
+        } else if (strcmp(line.operand1, "S") == 0) {
+            printf("4");
+        } else if (strcmp(line.operand1, "T") == 0) {
+            printf("5");
+        } else if (strcmp(line.operand1, "F") == 0) {
+            printf("6");
+        } else {
+            printf("0");
+        }
+
+        if (strcmp(line.operand2, "A") == 0) {
+            printf("0");
+        } else if (strcmp(line.operand2, "X") == 0) {
+            printf("1");
+        } else if (strcmp(line.operand2, "L") == 0) {
+            printf("2");
+        } else if (strcmp(line.operand2, "B") == 0) {
+            printf("3");
+        } else if (strcmp(line.operand2, "S") == 0) {
+            printf("4");
+        } else if (strcmp(line.operand2, "T") == 0) {
+            printf("5");
+        } else if (strcmp(line.operand2, "F") == 0) {
+            printf("6");
+        } else {
+            printf("0");
+        }
         break;
     case FMT3:
     case FMT4:
@@ -421,9 +456,9 @@ void objcode(LINE line, int line_count) {
 
         break;
     default:
-        printf(" ");
         break;
     }
+    printf(" ");
 }
 
 void header(LINE line, int start_loc, int program_len) {
@@ -431,12 +466,24 @@ void header(LINE line, int start_loc, int program_len) {
 }
 
 int find_nextline(int line_count) {
+    int temp_RE = FALSE;
     int texter_len = 0;
-    for (int i = line_count; texter_len <= 54; i++) {
-        if (strcmp(line_arr[i].op, "RESB") == 0) {
+    for (int i = line_count; texter_len < 29; i++) {
+        if (strcmp(line_arr[i].op, "BYTE") == 0) {
+            if (line_arr[i].operand1[0] == 'C') {
+                texter_len += strlen(line_arr[i].operand1) - 3;
+            } else if (line_arr[i].operand1[0] == 'X') {
+                texter_len += (strlen(line_arr[i].operand1) - 3) / 2;
+            }
+        }
+        if (line_arr[i].fmt == FMT2) 
+            texter_len += 2;
+        else if (line_arr[i].fmt == FMT3)
+            texter_len += 3;
+        else if (line_arr[i].fmt == FMT4)
+            texter_len += 4;
+        if (strcmp(line_arr[i].op, "RESB") == 0 || strcmp(line_arr[i].op, "RESW") == 0) {
             return texter_len;
-        } else {
-            texter_len += 6;
         }
     }
     return texter_len;
@@ -489,22 +536,39 @@ int main(int argc, char *argv[]) {
     // pass 2
     header(line_arr[1], start_loc, program_len);
     int texter_len = 0;
+    unsigned last_nextline_check = TRUE;
+    int text_count = 0;
     for (int i = 1; i < line_count; i++) {
-        // if (texter_len == 0) {
-        //     printf("T%06X", start_loc);
-        // } else if (texter_len < 54) {
-        //     strcat(temp, objcode(line_arr[i], i));
-        //     texter_len += 6;
-        // } else {
-        //     printf("%d%s\n", texter_len, temp);
-        //     texter_len = 0;
-        //     strcpy(temp, "");
-        // }
+        if (line_arr[i].fmt == FMT0)
+            continue;
         if (texter_len == 0) {
-            printf("T%06X", line_arr[i]);
             texter_len = find_nextline(i);
-            printf("%02X", texter_len);
+            if (texter_len == 0)
+                continue;
+            printf("T%06X ", line_arr[i].loc);
+            printf("%02X ", texter_len);
         }
-        objcode(line_arr[i], line_count);
+
+        objcode(line_arr[i], i);
+
+        if (strcmp(line_arr[i].op, "BYTE") == 0) {
+            if (line_arr[i].operand1[0] == 'C') {
+                text_count += strlen(line_arr[i].operand1) - 3;
+            } else if (line_arr[i].operand1[0] == 'X') {
+                text_count += (strlen(line_arr[i].operand1) - 3) / 2;
+            }
+        }
+        if (line_arr[i].fmt == FMT2) 
+            text_count += 2;
+        else if (line_arr[i].fmt == FMT3)
+            text_count += 3;
+        else if (line_arr[i].fmt == FMT4)
+            text_count += 4;
+
+        if (text_count >= texter_len) {
+            printf("\n");
+            text_count = 0;
+            texter_len = 0;
+        }
     }
 }
