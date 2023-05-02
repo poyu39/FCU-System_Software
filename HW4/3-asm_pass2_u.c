@@ -27,6 +27,12 @@ typedef struct
     unsigned addressing;
 } LINE;
 
+typedef struct 
+{
+    int addr;
+    unsigned useBASE;
+} DISP;
+
 
 LINE line_arr[100];
 int BASE = 0;
@@ -269,49 +275,65 @@ int find_symtab(LINE input_line, int line_count) {
     return -1;
 }
 
-void disp(LINE line, int line_count) {
-    int disp_hex = 0;
+DISP find_disp(LINE line, int line_count) {
+    DISP disp;
+    disp.useBASE = 0;
+    disp.addr = 0;
     int symtab_loc = find_symtab(line, line_count);
     if (line.fmt == FMT4) {
         if (symtab_loc == -1) {
-            printf("%05X", atoi(line.operand1));
+            disp.addr = atoi(line.operand1);
+            // printf("%05X", atoi(line.operand1));
         } else {
-            printf("%05X", symtab_loc);
+            disp.addr = symtab_loc;
+            // printf("%05X", symtab_loc);
         }
     } else {
         if (line.addressing == ADDR_SIMPLE) {
             if (symtab_loc == -1) {
-                printf("000");
+                disp.addr = 0;
+                // printf("000");
             }
         }
         if (line.addressing == ADDR_IMMEDIATE) {
             if (symtab_loc == -1) {
-                printf("%03X", atoi(line.operand1));
+                disp.addr = atoi(line.operand1);
+                // printf("%03X", atoi(line.operand1));
             }
         }
         if (line.addressing == ADDR_INDIRECT) {
             if (symtab_loc == -1) {
-                printf("000");
+                disp.addr = 0;
+                // printf("000");
             }
         }
-        disp_hex = symtab_loc - line_arr[line_count + 1].loc;
-        if (disp_hex < -2048) {
-            disp_hex -= BASE;
+        if (symtab_loc != -1) {
+            disp.addr = symtab_loc - line_arr[line_count + 1].loc;
+            if (disp.addr < -2048 || disp.addr > 2047) {
+                disp.addr = symtab_loc - BASE;
+                disp.useBASE = TRUE;
+            }
+            // if (disp.addr >= -2048 && disp.addr < 0) {
+            //     disp.addr += 4096;
+            // }
+            // printf("%03X", disp_hex);
+            // printf("\t%d", disp_hex);
         }
-        if (disp_hex >= -2048 && disp_hex <= 2048) {
-            disp_hex += 4096;
-        }
-        printf("%03X", disp_hex);
-        printf("\t%d", disp_hex);
+
     }
     if (strcmp(line.op, "LDB") == 0) {
-        BASE = disp_hex;
+        BASE = symtab_loc;
     }
+    return disp;
 }
 
-int objcode(LINE line, int line_count) {
+void objcode(LINE line, int line_count) {
     unsigned opni_hex;
     unsigned xbpe_hex;
+    char opni_char[2];
+    char xbpe_char[2];
+    char disp_char[2];
+
     switch (line.fmt) {
     case FMT0:
         if (strcmp(line.op, "BYTE") == 0) {
@@ -322,7 +344,6 @@ int objcode(LINE line, int line_count) {
             } else if (line.operand1[0] == 'X') {
                 for (int i = 2; i < strlen(line.operand1) - 1; i++) {
                     printf("%c", line.operand1[i]);
-                    // printf("test");
                 }
             }
         } else if (strcmp(line.op, "WORD") == 0) {
@@ -338,8 +359,6 @@ int objcode(LINE line, int line_count) {
             printf("B8");
         } else if (strcmp(line.op, "COMPR") == 0) {
             printf("A0");
-        } else {
-            printf("Error");
         }
         break;
     case FMT3:
@@ -356,8 +375,10 @@ int objcode(LINE line, int line_count) {
             opni_hex += 3;
         if (line.addressing == ADDR_SIMPLE)
             opni_hex += 3;
-        if (line.addressing == ADDR_IMMEDIATE)
+        if (line.addressing == ADDR_IMMEDIATE) {
             opni_hex += 1;
+            xbpe_hex -= 2;
+        }
         
         /*
                 bin     hex
@@ -370,30 +391,62 @@ int objcode(LINE line, int line_count) {
         xbpe_hex = 2;
         
         // addr
-        if (line.addressing == ADDR_INDEX)
+        if (line.addressing == ADDR_INDEX) {
             xbpe_hex += 8;
+            // xbpe_hex -= 2;
+        }
+            
 
         // fmt 
-        if (line.fmt == FMT4)
+        if (line.fmt == FMT4) {
             xbpe_hex += 1;
+            xbpe_hex -= 2;
+        }
+            
+        // printf("%02X%X", opni_hex, xbpe_hex);
         
-        printf("%02X%X", opni_hex, xbpe_hex);
-        
-        disp(line, line_count);
+        DISP disp = find_disp(line, line_count);
+        if (disp.useBASE) {
+            xbpe_hex += 4;
+            xbpe_hex -= 2;
+        }
+        if (disp.addr >= -2048 && disp.addr < 0) {
+            disp.addr += 4096;
+        }
+        if (line.fmt == FMT4) {
+            printf("%02X%1X%05X", opni_hex, xbpe_hex, disp.addr);
+        } else if (line.fmt == FMT3) {
+            printf("%02X%1X%03X", opni_hex, xbpe_hex, disp.addr);
+        }
 
         break;
     default:
         printf(" ");
         break;
     }
-    
-    printf("\n");
+}
+
+void header(LINE line, int start_loc, int program_len) {
+    printf("H%-6s%06X%06X\n", line_arr[1].symbol, start_loc, program_len);
+}
+
+int find_nextline(int line_count) {
+    int texter_len = 0;
+    for (int i = line_count; texter_len <= 54; i++) {
+        if (strcmp(line_arr[i].op, "RESB") == 0) {
+            return texter_len;
+        } else {
+            texter_len += 6;
+        }
+    }
+    return texter_len;
 }
 
 int main(int argc, char *argv[]) {
     // pass 1
     int i, c, line_count, line_loc, last_line_loc = 0;
     int start_loc = 0;
+    int program_len = 0;
     char buf[LEN_SYMBOL];
     
     line_loc = 0;
@@ -420,7 +473,7 @@ int main(int argc, char *argv[]) {
                     line_loc = last_line_loc;
                     line.loc = line_loc;
                     line_arr[line_count] = line;
-                    line_loc += addloc(&line);
+                    line_loc += 1;
                 } else if (c != LINE_ERROR && c != LINE_COMMENT) {
                     last_line_loc = line_loc;
                     line.loc = line_loc;
@@ -428,13 +481,30 @@ int main(int argc, char *argv[]) {
                     line_loc += addloc(&line);
                 }
             }
+            program_len = line_loc - start_loc;
             ASM_close();
         }
     }
     
     // pass 2
+    header(line_arr[1], start_loc, program_len);
+    int texter_len = 0;
     for (int i = 1; i < line_count; i++) {
-        printf("%06X\t%s\t", line_arr[i].loc, line_arr[i].op);
-        objcode(line_arr[i], i);
+        // if (texter_len == 0) {
+        //     printf("T%06X", start_loc);
+        // } else if (texter_len < 54) {
+        //     strcat(temp, objcode(line_arr[i], i));
+        //     texter_len += 6;
+        // } else {
+        //     printf("%d%s\n", texter_len, temp);
+        //     texter_len = 0;
+        //     strcpy(temp, "");
+        // }
+        if (texter_len == 0) {
+            printf("T%06X", line_arr[i]);
+            texter_len = find_nextline(i);
+            printf("%02X", texter_len);
+        }
+        objcode(line_arr[i], line_count);
     }
 }
