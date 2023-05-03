@@ -35,6 +35,8 @@ typedef struct
 
 
 LINE line_arr[100];
+LINE m_arr[100];
+int m_count = 0;
 int BASE = 0;
 int line_len = 0;
 
@@ -263,6 +265,7 @@ DISP find_disp(LINE line, int line_count) {
             disp.addr = atoi(line.operand1);
         } else {
             disp.addr = symtab_loc;
+            m_arr[m_count++] = line;
         }
     } else {
         if (line.addressing == ADDR_SIMPLE) {
@@ -428,7 +431,8 @@ void objcode(LINE line, int line_count) {
     default:
         break;
     }
-    printf(" ");
+
+    // printf(" ");
 }
 
 void header(LINE line, int start_loc, int program_len) {
@@ -543,4 +547,10 @@ int main(int argc, char *argv[]) {
             texter_len = 0;
         }
     }
+    
+    for (int i = 0; i < m_count; i++) {
+        printf("M%06X05\n", m_arr[i].loc + 1);
+    }
+
+    printf("E%06X\n", start_loc);
 }
