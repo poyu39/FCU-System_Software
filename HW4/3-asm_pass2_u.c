@@ -511,6 +511,16 @@ int main(int argc, char *argv[]) {
     }
     line_len = line_count;
 
+    // is sicxe
+    unsigned sicxe = FALSE;
+    for (int i = 0; i < line_len; i++) {
+        if (isSicXeInstruction(line_arr[i].op)) {
+            sicxe = TRUE;
+            break;
+        }
+    }
+    printf("SICXE: %d\n", sicxe);
+
     // pass 2
     header(line_arr[1], start_loc, program_len);
     int texter_len = 0;
