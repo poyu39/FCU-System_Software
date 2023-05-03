@@ -521,8 +521,8 @@ int main(int argc, char *argv[]) {
         }
         if (texter_len == 0) {
             texter_len = find_nextline(i);
-            printf("T%06X ", line_arr[i].loc);
-            printf("%02X ", texter_len);
+            printf("T%06X", line_arr[i].loc);
+            printf("%02X", texter_len);
         }
 
         objcode(line_arr[i], i);
