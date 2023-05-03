@@ -298,7 +298,7 @@ DISP find_disp(LINE line, int line_count) {
     return disp;
 }
 
-void objcode(LINE line, int line_count) {
+void sicxe_objcode(LINE line, int line_count) {
     unsigned opni_hex;
     unsigned xbpe_hex;
     char opni_char[2];
@@ -485,7 +485,7 @@ int main(int argc, char *argv[]) {
             for (line_count = 1; (c = process_line(&line)) != LINE_EOF; line_count++) {
                 if (line_count == 1) {
                     if (strcmp(line.op, "START") == 0) {
-                        start_loc = strtol(line.operand1, NULL, 16);
+                        line_loc = strtol(line.operand1, NULL, 16);
                     } else {
                         line_loc = 0;
                     }
@@ -520,47 +520,56 @@ int main(int argc, char *argv[]) {
         }
     }
     printf("SICXE: %d\n", sicxe);
-
+    
     // pass 2
-    header(line_arr[1], start_loc, program_len);
-    int texter_len = 0;
-    int text_count = 0;
-    for (int i = 1; i < line_count; i++) {
-        if (line_arr[i].fmt == FMT0 && strcmp(line_arr[i].op, "BYTE") != 0) {
-            continue;
-        }
-        if (texter_len == 0) {
-            texter_len = find_nextline(i);
-            printf("T%06X", line_arr[i].loc);
-            printf("%02X", texter_len);
-        }
+    if (sicxe) {
+        header(line_arr[1], start_loc, program_len);
+        int texter_len = 0;
+        int text_count = 0;
+        for (int i = 1; i < line_count; i++) {
+            if (line_arr[i].fmt == FMT0 && strcmp(line_arr[i].op, "BYTE") != 0) {
+                continue;
+            }
+            if (texter_len == 0) {
+                texter_len = find_nextline(i);
+                printf("T%06X", line_arr[i].loc);
+                printf("%02X", texter_len);
+            }
 
-        objcode(line_arr[i], i);
+            sicxe_objcode(line_arr[i], i);
 
-        if (strcmp(line_arr[i].op, "BYTE") == 0) {
-            if (line_arr[i].operand1[0] == 'C') {
-                text_count += strlen(line_arr[i].operand1) - 3;
-            } else if (line_arr[i].operand1[0] == 'X') {
-                text_count += (strlen(line_arr[i].operand1) - 3) / 2;
+            if (strcmp(line_arr[i].op, "BYTE") == 0) {
+                if (line_arr[i].operand1[0] == 'C') {
+                    text_count += strlen(line_arr[i].operand1) - 3;
+                } else if (line_arr[i].operand1[0] == 'X') {
+                    text_count += (strlen(line_arr[i].operand1) - 3) / 2;
+                }
+            }
+            if (line_arr[i].fmt == FMT2) 
+                text_count += 2;
+            else if (line_arr[i].fmt == FMT3)
+                text_count += 3;
+            else if (line_arr[i].fmt == FMT4)
+                text_count += 4;
+
+            if (text_count >= texter_len) {
+                printf("\n");
+                text_count = 0;
+                texter_len = 0;
             }
         }
-        if (line_arr[i].fmt == FMT2) 
-            text_count += 2;
-        else if (line_arr[i].fmt == FMT3)
-            text_count += 3;
-        else if (line_arr[i].fmt == FMT4)
-            text_count += 4;
-
-        if (text_count >= texter_len) {
-            printf("\n");
-            text_count = 0;
-            texter_len = 0;
+        
+        for (int i = 0; i < m_count; i++) {
+            printf("M%06X05\n", m_arr[i].loc + 1);
         }
+
+        printf("E%06X\n", start_loc);
+    } else {
+        header(line_arr[1], start_loc, program_len);
+        printf("%06X", start_loc);
+        int texter_len = 0;
+        int text_count = 0;
+        for (int i = 1; i < line_count; i++) {}
     }
     
-    for (int i = 0; i < m_count; i++) {
-        printf("M%06X05\n", m_arr[i].loc + 1);
-    }
-
-    printf("E%06X\n", start_loc);
 }
