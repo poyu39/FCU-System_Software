@@ -36,6 +36,7 @@ typedef struct
 
 LINE line_arr[100];
 int BASE = 0;
+int line_len = 0;
 
 int process_line(LINE *line);
 /* return LINE_EOF, LINE_COMMENT, LINE_ERROR, LINE_CORRECT and Instruction information in *line*/
@@ -275,6 +276,15 @@ int find_symtab(LINE input_line, int line_count) {
     return -1;
 }
 
+unsigned is_symbol(int line_count) {
+    for (int i = 0; i < line_len; i++) {
+        if (strcmp(line_arr[line_count].operand1, line_arr[i].symbol) == 0 && line_count != i) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 DISP find_disp(LINE line, int line_count) {
     DISP disp;
     disp.useBASE = 0;
@@ -402,8 +412,10 @@ void objcode(LINE line, int line_count) {
             printf("4F0000");
             break;
         }
+        unsigned usePC = TRUE;
         opni_hex = line.code;
-        
+        xbpe_hex = 2;
+
         if (line.addressing == ADDR_INDIRECT)
             opni_hex += 2;
         if (line.addressing == ADDR_INDEX)
@@ -412,7 +424,9 @@ void objcode(LINE line, int line_count) {
             opni_hex += 3;
         if (line.addressing == ADDR_IMMEDIATE) {
             opni_hex += 1;
-            xbpe_hex -= 2;
+            if (is_symbol(line_count) == 0) {
+                usePC = FALSE;
+            }
         }
         
         /*
@@ -422,27 +436,25 @@ void objcode(LINE line, int line_count) {
             p   0010    2
             e   0001    1
         */
-
-        xbpe_hex = 2;
         
         // addr
         if (line.addressing == ADDR_INDEX) {
             xbpe_hex += 8;
-            // xbpe_hex -= 2;
         }
             
 
         // fmt 
         if (line.fmt == FMT4) {
             xbpe_hex += 1;
-            xbpe_hex -= 2;
+            usePC = FALSE;
         }
-            
-        // printf("%02X%X", opni_hex, xbpe_hex);
         
         DISP disp = find_disp(line, line_count);
         if (disp.useBASE) {
             xbpe_hex += 4;
+            usePC = FALSE;
+        }
+        if (!usePC) {
             xbpe_hex -= 2;
         }
         if (disp.addr >= -2048 && disp.addr < 0) {
@@ -483,6 +495,9 @@ int find_nextline(int line_count) {
         else if (line_arr[i].fmt == FMT4)
             texter_len += 4;
         if (strcmp(line_arr[i].op, "RESB") == 0 || strcmp(line_arr[i].op, "RESW") == 0) {
+            return texter_len;
+        }
+        if (i > line_len) {
             return texter_len;
         }
     }
@@ -532,19 +547,18 @@ int main(int argc, char *argv[]) {
             ASM_close();
         }
     }
-    
+    line_len = line_count;
+
     // pass 2
     header(line_arr[1], start_loc, program_len);
     int texter_len = 0;
-    unsigned last_nextline_check = TRUE;
     int text_count = 0;
     for (int i = 1; i < line_count; i++) {
-        if (line_arr[i].fmt == FMT0)
+        if (line_arr[i].fmt == FMT0 && strcmp(line_arr[i].op, "BYTE") != 0) {
             continue;
+        }
         if (texter_len == 0) {
             texter_len = find_nextline(i);
-            if (texter_len == 0)
-                continue;
             printf("T%06X ", line_arr[i].loc);
             printf("%02X ", texter_len);
         }
