@@ -191,7 +191,7 @@ int process_line(LINE *line)
                             ret = LINE_CORRECT;
                             state = 7; /* skip following tokens in the line */
                         } else {
-                            printf("Operand2 exists only if format 2  is used\n");
+                            printf("Operand2 exists only if format 2 or 3 is used\n");
                             ret = LINE_ERROR;
                             state = 7; /* skip following tokens in the line */
                         }
@@ -255,7 +255,7 @@ unsigned is_symbol(int line_count) {
     return 0;
 }
 
-DISP find_disp(LINE line, int line_count) {
+DISP sicxe_find_disp(LINE line, int line_count) {
     DISP disp;
     disp.useBASE = 0;
     disp.addr = 0;
@@ -410,7 +410,7 @@ void sicxe_objcode(LINE line, int line_count) {
             usePC = FALSE;
         }
         
-        DISP disp = find_disp(line, line_count);
+        DISP disp = sicxe_find_disp(line, line_count);
         if (disp.useBASE) {
             xbpe_hex += 4;
             usePC = FALSE;
@@ -435,14 +435,37 @@ void sicxe_objcode(LINE line, int line_count) {
     // printf(" ");
 }
 
+void sic_objcode(LINE line, int line_count) {
+    int disp = find_symtab(line, line_count);
+    if (strcmp(line.op, "BYTE") == 0) {
+        if (line.operand1[0] == 'C') {
+            for (int i = 2; i < strlen(line.operand1) - 1; i++) {
+                printf("%02X", line.operand1[i]);
+            }
+        } else if (line.operand1[0] == 'X') {
+            for (int i = 2; i < strlen(line.operand1) - 1; i++) {
+                printf("%c", line.operand1[i]);
+            }
+        }
+    } else if (strcmp(line.op, "WORD") == 0) {
+        printf("%06X", atoi(line.operand1));
+    } else if (strcmp(line.op, "RSUB") == 0) {
+        printf("4C0000");
+    } else if (line.addressing >= ADDR_INDEX) {
+        printf("%02X%04X", line.code, disp + 32768);
+    } else {
+        printf("%02X%04X", line.code, disp);
+    }
+    // printf(" ");
+}
+
 void header(LINE line, int start_loc, int program_len) {
     printf("H%-6s%06X%06X\n", line_arr[1].symbol, start_loc, program_len);
 }
 
 int find_nextline(int line_count) {
-    int temp_RE = FALSE;
     int texter_len = 0;
-    for (int i = line_count; texter_len < 29; i++) {
+    for (int i = line_count; texter_len <= 27; i++) {
         if (strcmp(line_arr[i].op, "BYTE") == 0) {
             if (line_arr[i].operand1[0] == 'C') {
                 texter_len += strlen(line_arr[i].operand1) - 3;
@@ -450,12 +473,16 @@ int find_nextline(int line_count) {
                 texter_len += (strlen(line_arr[i].operand1) - 3) / 2;
             }
         }
+        if (strcmp(line_arr[i].op, "WORD") == 0) {
+            texter_len += 3;
+        }
         if (line_arr[i].fmt == FMT2) 
             texter_len += 2;
         else if (line_arr[i].fmt == FMT3)
             texter_len += 3;
         else if (line_arr[i].fmt == FMT4)
             texter_len += 4;
+        // printf("%d %d\n", i, texter_len);
         if (strcmp(line_arr[i].op, "RESB") == 0 || strcmp(line_arr[i].op, "RESW") == 0) {
             return texter_len;
         }
@@ -519,15 +546,15 @@ int main(int argc, char *argv[]) {
             break;
         }
     }
-    printf("SICXE: %d\n", sicxe);
+    // printf("SICXE: %d\n", sicxe);
     
     // pass 2
+    header(line_arr[1], start_loc, program_len);
     if (sicxe) {
-        header(line_arr[1], start_loc, program_len);
         int texter_len = 0;
         int text_count = 0;
         for (int i = 1; i < line_count; i++) {
-            if (line_arr[i].fmt == FMT0 && strcmp(line_arr[i].op, "BYTE") != 0) {
+            if (line_arr[i].fmt == FMT0 && strcmp(line_arr[i].op, "BYTE") != 0 && strcmp(line_arr[i].op, "WORD") != 0) {
                 continue;
             }
             if (texter_len == 0) {
@@ -565,11 +592,36 @@ int main(int argc, char *argv[]) {
 
         printf("E%06X\n", start_loc);
     } else {
-        header(line_arr[1], start_loc, program_len);
-        printf("%06X", start_loc);
         int texter_len = 0;
         int text_count = 0;
-        for (int i = 1; i < line_count; i++) {}
+        for (int i = 1; i < line_count; i++) {
+            if (line_arr[i].fmt == FMT0 && strcmp(line_arr[i].op, "BYTE") != 0 && strcmp(line_arr[i].op, "WORD") != 0) {
+                continue;
+            }
+            if (texter_len == 0) {
+                texter_len = find_nextline(i);
+                printf("T%06X", line_arr[i].loc);
+                printf("%02X", texter_len);
+            }
+
+            sic_objcode(line_arr[i], i);
+
+            if (strcmp(line_arr[i].op, "BYTE") == 0) {
+                if (line_arr[i].operand1[0] == 'C') {
+                    text_count += strlen(line_arr[i].operand1) - 3;
+                } else if (line_arr[i].operand1[0] == 'X') {
+                    text_count += (strlen(line_arr[i].operand1) - 3) / 2;
+                }
+            } else {
+                text_count += 3;
+            }
+            
+            if (text_count >= texter_len) {
+                printf("\n");
+                text_count = 0;
+                texter_len = 0;
+            }
+        }
+        printf("E%06X\n", start_loc);
     }
-    
 }
