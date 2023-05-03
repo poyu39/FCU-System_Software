@@ -232,39 +232,7 @@ int addloc(LINE *line) {
             next_loc = 3;
         }
     }
-    // printf("next_loc : %d ", next_loc);
     return next_loc;
-}
-
-void print_line(int c, LINE line, int line_count, int line_loc) {
-    if (c == LINE_ERROR) {
-        printf("%-03d : Error\n", line_count);
-    } else if (c == LINE_COMMENT) {
-        printf("%-03d : Comment line\n", line_count);
-    } else {
-        char output_op[LEN_SYMBOL];
-        if (line.fmt == FMT4) {
-            strcpy(output_op, "+");
-            strcat(output_op, line.op);
-        } else {
-            strcpy(output_op, line.op);
-        }
-        char output_operand[LEN_SYMBOL];
-        if (line.addressing == ADDR_IMMEDIATE)
-            strcpy(output_operand, "#");
-        else if (line.addressing == ADDR_INDIRECT)
-            strcpy(output_operand, "@");
-        else
-            strcpy(output_operand, "");
-        if (line.operand2[0] == '\0') {
-            strcat(output_operand, line.operand1);
-        } else {
-            strcpy(output_operand, line.operand1);
-            strcat(output_operand, ",");
-            strcat(output_operand, line.operand2);
-        }
-        printf("%-03d : %06X      %-12s %-12s %-12s \n", line_count, line_loc, line.symbol, output_op, output_operand);
-    }
 }
 
 int find_symtab(LINE input_line, int line_count) {
@@ -293,28 +261,23 @@ DISP find_disp(LINE line, int line_count) {
     if (line.fmt == FMT4) {
         if (symtab_loc == -1) {
             disp.addr = atoi(line.operand1);
-            // printf("%05X", atoi(line.operand1));
         } else {
             disp.addr = symtab_loc;
-            // printf("%05X", symtab_loc);
         }
     } else {
         if (line.addressing == ADDR_SIMPLE) {
             if (symtab_loc == -1) {
                 disp.addr = 0;
-                // printf("000");
             }
         }
         if (line.addressing == ADDR_IMMEDIATE) {
             if (symtab_loc == -1) {
                 disp.addr = atoi(line.operand1);
-                // printf("%03X", atoi(line.operand1));
             }
         }
         if (line.addressing == ADDR_INDIRECT) {
             if (symtab_loc == -1) {
                 disp.addr = 0;
-                // printf("000");
             }
         }
         if (symtab_loc != -1) {
@@ -323,11 +286,6 @@ DISP find_disp(LINE line, int line_count) {
                 disp.addr = symtab_loc - BASE;
                 disp.useBASE = TRUE;
             }
-            // if (disp.addr >= -2048 && disp.addr < 0) {
-            //     disp.addr += 4096;
-            // }
-            // printf("%03X", disp_hex);
-            // printf("\t%d", disp_hex);
         }
 
     }
