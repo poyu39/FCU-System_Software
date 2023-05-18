@@ -129,11 +129,28 @@ Instruction *is_opcode(char *op)
     return NULL; /* not found */
 }
 
-const char *sicXeInstructions[] = {"LDB", "LDT", "LDX", "LPS", "STB", "STT", "STX", "STSW", "SVC", "ADDR", "SUBR", "MULR", "DIVR", "COMPR", "SHIFTL", "SHIFTR", "RMO", "SIO", "TIO", "HIO", "FLOAT", "FIX", "NORM", "CLEAR"};
+const char *sicxeOnly[] = {
+    "ADDR",
+    "CLEAR",
+    "COMPR",
+    "DIVR",
+    "LDB",
+    "LDS",
+    "LDT",
+    "MULR",
+    "RMO",
+    "SHIFTL",
+    "SHIFTR",
+    "STB",
+    "STS",
+    "STT",
+    "SUBR",
+    "TIXR"
+};
 
 unsigned isSicXeInstruction(const char *instruction) {
-    for (int i = 0; i < sizeof(sicXeInstructions) / sizeof(sicXeInstructions[0]); i++) {
-        if (strcmp(instruction, sicXeInstructions[i]) == 0) {
+    for (int i = 0; i < sizeof(sicxeOnly) / sizeof(sicxeOnly[0]); i++) {
+        if (strcmp(instruction, sicxeOnly[i]) == 0) {
             return TRUE;
         }
     }
